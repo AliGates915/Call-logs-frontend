@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import gsap from "gsap";
 import { toast } from "react-toastify";
-import axios from 'axios';
+import axios from "axios";
 import { PuffLoader } from "react-spinners";
 import Swal from "sweetalert2";
 import { FiSearch, FiPlus, FiEdit, FiTrash2, FiUser, FiPhone, FiMapPin, FiBriefcase, FiMail } from "react-icons/fi";
@@ -41,8 +41,8 @@ const CustomerData = () => {
       setLoading(true);
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/clients`);
       const result = await response.json();
-      setCustomerData(result);
-      setFilteredCustomers(result);
+      setCustomerData(result || []);
+      setFilteredCustomers(result || []);
     } catch (error) {
       console.error("Error fetching customer data:", error);
       toast.error("Failed to fetch customer data");
@@ -159,6 +159,7 @@ const CustomerData = () => {
       setIsEdit(false);
       setIsSliderOpen(false);
 
+      // Refresh list
       fetchCustomerData();
     } catch (error) {
       console.error(error);
@@ -193,11 +194,12 @@ const CustomerData = () => {
     setPersons(newPersons);
   };
 
-  // Edit Customer
+  // Open the edit modal and populate the form
   const handleEdit = (client) => {
     setIsEdit(true);
-    setEditId(client._id);
+    setEditId(client._id); // Save client ID for update
 
+    // Prefill customer section
     setCustomerEmail(client.email || "");
     setCustomerPhone(client.mobileNumber || "");
     setCustomerAddress(client.address || "");
@@ -205,6 +207,7 @@ const CustomerData = () => {
     setCompanyName(client.companyName || "");
     setBusinessType(client.businessType || "");
 
+    // Prefill persons array
     setPersons(
       client.persons?.map((person) => ({
         fullName: person.name || "",
@@ -215,6 +218,7 @@ const CustomerData = () => {
       })) || [{ fullName: "", phone: "", email: "", designation: "", department: "" }]
     );
 
+    // Prefill assign section
     setAssignedStaff(
       typeof client.assignToStaffId === "object" ? client.assignToStaffId?._id || "" : client.assignToStaffId || ""
     );
@@ -222,6 +226,7 @@ const CustomerData = () => {
       typeof client.assignToProductId === "object" ? client.assignToProductId?._id || "" : client.assignToProductId || ""
     );
 
+    // Prefill image
     if (client.companyLogo?.url) {
       setImagePreview(client.companyLogo.url);
       setImage(null); // Reset file input for editing
@@ -230,14 +235,14 @@ const CustomerData = () => {
       setImage(null);
     }
 
-    setIsSliderOpen(true);
+    setIsSliderOpen(true); // Open the form modal
   };
 
   // Delete Customer
   const handleDelete = async (id) => {
     const swalWithTailwindButtons = Swal.mixin({
       customClass: {
-        actions: "space-x-2",
+        actions: "space-x-2", // ensures gap between buttons
         confirmButton:
           "bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300",
         cancelButton:
@@ -271,9 +276,9 @@ const CustomerData = () => {
               },
             });
 
+            // Update UI after deletion
             setCustomerData(customerList.filter((p) => p._id !== id));
             setFilteredCustomers(filteredCustomers.filter((p) => p._id !== id));
-
             swalWithTailwindButtons.fire("Deleted!", "Customer deleted successfully.", "success");
           } catch (error) {
             console.error("Delete error:", error);
@@ -344,15 +349,48 @@ const CustomerData = () => {
               {userInfo?.isAdmin && <div className="text-right">Actions</div>}
             </div>
 
-            <div className="mt-4 flex flex-col gap-3">
-              {filteredCustomers.map((client, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-1 md:grid-cols-8 items-center gap-4 bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition border border-gray-100"
-                >
-                  {/* Mobile view header */}
-                  <div className="md:hidden flex justify-between items-center border-b pb-2 mb-2">
-                    <div className="flex items-center gap-3">
+            <div className="mt-4 flex flex-col gap-[14px] pb-14">
+              {Array.isArray(filteredCustomers) &&
+                filteredCustomers.map((client, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 md:grid-cols-8 items-center gap-4 bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition border border-gray-100"
+                  >
+                    {/* Mobile view header */}
+                    <div className="md:hidden flex justify-between items-center border-b pb-2 mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 flex items-center justify-center bg-[#f0d694] rounded-full">
+                          <img
+                            src={client.companyLogo?.url || "https://via.placeholder.com/40"}
+                            alt="Company Logo"
+                            className="w-7 h-7 object-cover rounded-full"
+                          />
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">{client.companyName}</div>
+                      </div>
+                      {userInfo?.isAdmin && (
+                        <div className="text-right relative group">
+                          <button className="text-gray-400 hover:text-gray-600 text-xl">⋯</button>
+                          <div className="absolute right-0 top-6 w-28 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300 z-50 flex flex-col">
+                            <button
+                              onClick={() => handleEdit(client)}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-blue-100 text-blue-600 flex items-center gap-2"
+                            >
+                              <FiEdit size={14} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(client._id)}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-red-100 text-red-500 flex items-center gap-2"
+                            >
+                              <FiTrash2 size={14} /> Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desktop view cells */}
+                    <div className="hidden md:flex items-center gap-3">
                       <div className="w-10 h-10 flex items-center justify-center bg-[#f0d694] rounded-full">
                         <img
                           src={client.companyLogo?.url || "https://via.placeholder.com/40"}
@@ -360,126 +398,88 @@ const CustomerData = () => {
                           className="w-7 h-7 object-cover rounded-full"
                         />
                       </div>
-                      <div className="text-sm font-medium text-gray-900">{client.companyName}</div>
+                      <span className="text-sm font-medium text-gray-900 truncate">{client.companyName}</span>
                     </div>
+                    <div className="hidden md:flex items-center text-sm text-green-600 truncate">
+                      <FiMail className="mr-2 text-gray-400" size={14} />
+                      {client.email || "N/A"}
+                    </div>
+                    <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
+                      <FiBriefcase className="mr-2 text-gray-400" size={14} />
+                      {client.persons?.[0]?.designation || "N/A"}
+                    </div>
+                    <div className="hidden md:flex items-center text-sm text-green-600 truncate">
+                      <FiMapPin className="mr-2 text-gray-400" size={14} />
+                      {client.address || "N/A"}
+                    </div>
+                    <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
+                      <FiUser className="mr-2 text-gray-400" size={14} />
+                      {client.persons?.[0]?.department || "N/A"}
+                    </div>
+                    <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
+                      <FiUser className="mr-2 text-gray-400" size={14} />
+                      {client?.assignToStaffId?.username || "N/A"}
+                    </div>
+                    <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
+                      <FiBriefcase className="mr-2 text-gray-400" size={14} />
+                      {client?.assignToProductId?.name || "N/A"}
+                    </div>
+
+                    {/* Mobile view content */}
+                    <div className="md:hidden grid grid-cols-2 gap-2 mt-2">
+                      <div className="text-xs text-gray-500">Email:</div>
+                      <div className="text-sm flex items-center">
+                        <FiMail className="mr-1 text-gray-400" size={14} />
+                        {client.email || "N/A"}
+                      </div>
+                      <div className="text-xs text-gray-500">Designation:</div>
+                      <div className="text-sm flex items-center">
+                        <FiBriefcase className="mr-1 text-gray-400" size={14} />
+                        {client.persons?.[0]?.designation || "N/A"}
+                      </div>
+                      <div className="text-xs text-gray-500">Address:</div>
+                      <div className="text-sm flex items-center">
+                        <FiMapPin className="mr-1 text-gray-400" size={14} />
+                        {client.address || "N/A"}
+                      </div>
+                      <div className="text-xs text-gray-500">Department:</div>
+                      <div className="text-sm flex items-center">
+                        <FiUser className="mr-1 text-gray-400" size={14} />
+                        {client.persons?.[0]?.department || "N/A"}
+                      </div>
+                      <div className="text-xs text-gray-500">Assigned Staff:</div>
+                      <div className="text-sm flex items-center">
+                        <FiUser className="mr-1 text-gray-400" size={14} />
+                        {client?.assignToStaffId?.username || "N/A"}
+                      </div>
+                      <div className="text-xs text-gray-500">Assigned Product:</div>
+                      <div className="text-sm flex items-center">
+                        <FiBriefcase className="mr-1 text-gray-400" size={14} />
+                        {client?.assignToProductId?.name || "N/A"}
+                      </div>
+                    </div>
+
+                    {/* Actions - visible on desktop only (mobile actions are in header) */}
                     {userInfo?.isAdmin && (
-                      <div className="text-right relative group">
-                        <button className="text-gray-400 hover:text-gray-600 text-xl">⋯</button>
-                        <div className="absolute right-0 top-6 w-28 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300 z-50 flex flex-col">
+                      <div className="hidden md:flex justify-end">
+                        <div className="flex space-x-2">
                           <button
                             onClick={() => handleEdit(client)}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-blue-100 text-blue-600 flex items-center gap-2"
+                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                           >
-                            <FiEdit size={14} /> Edit
+                            <FiEdit size={16} />
                           </button>
                           <button
                             onClick={() => handleDelete(client._id)}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-red-100 text-red-500 flex items-center gap-2"
+                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                           >
-                            <FiTrash2 size={14} /> Delete
+                            <FiTrash2 size={16} />
                           </button>
                         </div>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Desktop view cells */}
-                  <div className="hidden md:flex items-center gap-3">
-                    <div className="w-10 h-10 flex items-center justify-center bg-[#f0d694] rounded-full">
-                      <img
-                        src={client.companyLogo?.url || "https://via.placeholder.com/40"}
-                        alt="Company Logo"
-                        className="w-7 h-7 object-cover rounded-full"
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-gray-900 truncate">{client.companyName}</span>
-                  </div>
-                  <div className="hidden md:flex items-center text-sm text-green-600 truncate">
-                    <FiMail className="mr-2 text-gray-400" size={14} />
-                    {client.email || "N/A"}
-                  </div>
-                  <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
-                    <FiBriefcase className="mr-2 text-gray-400" size={14} />
-                    {client.persons?.[0]?.designation || "N/A"}
-                  </div>
-                  <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
-                    <FiMapPin className="mr-2 text-gray-400" size={14} />
-                    {client.address || "N/A"}
-                  </div>
-                  <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
-                    <FiUser className="mr-2 text-gray-400" size={14} />
-                    {client.persons?.[0]?.department || "N/A"}
-                  </div>
-                  <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
-                    <FiUser className="mr-2 text-gray-400" size={14} />
-                    {client?.assignToStaffId?.username || "N/A"}
-                  </div>
-                  <div className="hidden md:flex items-center text-sm text-gray-500 truncate">
-                    <FiBriefcase className="mr-2 text-gray-400" size={14} />
-                    {client?.assignToProductId?.name || "N/A"}
-                  </div>
-                  
-                  {/* Mobile view content */}
-                  <div className="md:hidden grid grid-cols-2 gap-2 mt-2">
-                    <div className="text-xs text-gray-500">Email:</div>
-                    <div className="text-sm flex items-center">
-                      <FiMail className="mr-1 text-gray-400" size={14} />
-                      {client.email || "N/A"}
-                    </div>
-                    
-                    <div className="text-xs text-gray-500">Designation:</div>
-                    <div className="text-sm flex items-center">
-                      <FiBriefcase className="mr-1 text-gray-400" size={14} />
-                      {client.persons?.[0]?.designation || "N/A"}
-                    </div>
-                    
-                    <div className="text-xs text-gray-500">Address:</div>
-                    <div className="text-sm flex items-center">
-                      <FiMapPin className="mr-1 text-gray-400" size={14} />
-                      {client.address || "N/A"}
-                    </div>
-                    
-                    <div className="text-xs text-gray-500">Department:</div>
-                    <div className="text-sm flex items-center">
-                      <FiUser className="mr-1 text-gray-400" size={14} />
-                      {client.persons?.[0]?.department || "N/A"}
-                    </div>
-                    
-                    <div className="text-xs text-gray-500">Assigned Staff:</div>
-                    <div className="text-sm flex items-center">
-                      <FiUser className="mr-1 text-gray-400" size={14} />
-                      {client?.assignToStaffId?.username || "N/A"}
-                    </div>
-                    
-                    <div className="text-xs text-gray-500">Assigned Product:</div>
-                    <div className="text-sm flex items-center">
-                      <FiBriefcase className="mr-1 text-gray-400" size={14} />
-                      {client?.assignToProductId?.name || "N/A"}
-                    </div>
-                  </div>
-                  
-                  {/* Actions - visible on desktop only (mobile actions are in header) */}
-                  {userInfo?.isAdmin && (
-                    <div className="hidden md:flex justify-end">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEdit(client)}
-                          className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                        >
-                          <FiEdit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(client._id)}
-                          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              
+                ))}
               {filteredCustomers.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   {searchQuery ? "No customers found matching your search" : "No customers available"}
@@ -528,7 +528,7 @@ const CustomerData = () => {
                       placeholder="Enter company name"
                     />
                   </div>
-                   <div>
+                  <div>
                     <label className="block text-gray-700 mb-1">Address</label>
                     <input
                       type="text"
@@ -568,7 +568,6 @@ const CustomerData = () => {
                       placeholder="Enter phone number"
                     />
                   </div>
-                 
                   {/* Company Logo Upload */}
                   <div className="col-span-2">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Company Logo Upload</h3>
@@ -616,61 +615,61 @@ const CustomerData = () => {
                     <FiPlus /> Add New Person
                   </button>
                 </div>
-                {persons.map((person, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 last:mb-0">
-                    <div>
-                      <label className="block text-gray-700 mb-1">Full Name</label>
-                      <input
-                        type="text"
-                        value={person.fullName}
-                        onChange={(e) => handlePersonChange(index, "fullName", e.target.value)}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
-                        placeholder="Enter full name"
-                      />
+                {Array.isArray(persons) &&
+                  persons.map((person, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 last:mb-0">
+                      <div>
+                        <label className="block text-gray-700 mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={person.fullName}
+                          onChange={(e) => handlePersonChange(index, "fullName", e.target.value)}
+                          className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
+                          placeholder="Enter full name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 mb-1">Designation</label>
+                        <input
+                          type="text"
+                          value={person.designation}
+                          onChange={(e) => handlePersonChange(index, "designation", e.target.value)}
+                          className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
+                          placeholder="Enter designation"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 mb-1">Department</label>
+                        <input
+                          type="text"
+                          value={person.department}
+                          onChange={(e) => handlePersonChange(index, "department", e.target.value)}
+                          className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
+                          placeholder="Enter department"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 mb-1">Phone Number</label>
+                        <input
+                          type="text"
+                          value={person.phone}
+                          onChange={(e) => handlePersonChange(index, "phone", e.target.value)}
+                          className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
+                          placeholder="Enter phone number"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={person.email}
+                          onChange={(e) => handlePersonChange(index, "email", e.target.value)}
+                          className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
+                          placeholder="Enter email"
+                        />
+                      </div>
                     </div>
-                   
-                    <div>
-                      <label className="block text-gray-700 mb-1">Designation</label>
-                      <input
-                        type="text"
-                        value={person.designation}
-                        onChange={(e) => handlePersonChange(index, "designation", e.target.value)}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
-                        placeholder="Enter designation"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1">Department</label>
-                      <input
-                        type="text"
-                        value={person.department}
-                        onChange={(e) => handlePersonChange(index, "department", e.target.value)}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
-                        placeholder="Enter department"
-                      />
-                    </div>
-                     <div>
-                      <label className="block text-gray-700 mb-1">Phone Number</label>
-                      <input
-                        type="text"
-                        value={person.phone}
-                        onChange={(e) => handlePersonChange(index, "phone", e.target.value)}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1">Email</label>
-                      <input
-                        type="email"
-                        value={person.email}
-                        onChange={(e) => handlePersonChange(index, "email", e.target.value)}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
-                        placeholder="Enter email"
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
 
               {/* Assign Section */}
@@ -685,11 +684,12 @@ const CustomerData = () => {
                       className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
                     >
                       <option value="">Select Staff</option>
-                      {staffMembers.map((staff) => (
-                        <option key={staff._id} value={staff._id}>
-                          {staff.username}
-                        </option>
-                      ))}
+                      {Array.isArray(staffMembers) &&
+                        staffMembers.map((staff) => (
+                          <option key={staff._id} value={staff._id}>
+                            {staff.username}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div>
@@ -700,11 +700,12 @@ const CustomerData = () => {
                       className="w-full p-2 border rounded focus:ring-2 focus:ring-newPrimary/50 focus:border-newPrimary outline-none transition-all"
                     >
                       <option value="">Select Product</option>
-                      {productList.map((product) => (
-                        <option key={product._id} value={product._id}>
-                          {product.name}
-                        </option>
-                      ))}
+                      {Array.isArray(productList) &&
+                        productList.map((product) => (
+                          <option key={product._id} value={product._id}>
+                            {product.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>
